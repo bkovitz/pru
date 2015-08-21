@@ -1,0 +1,31 @@
+This is a simple (as in, "hello world"-level) program to help you get started
+with programming the AM335x PRU_ICSS on the BeagleBone Black. (It's very
+specific to that platform.)
+
+I've got a web page up that explains all this in way more detail:
+
+   http://mythopoeic.org/bbb-pru-minimal
+
+The TL;DR version:
+
+1) To build, just type "make". (You have to have pasm in your $PATH,
+the prussdrv library headers in /usr/include/pruss/ and the prussdrv
+libraries in /usr/lib/ for it to work as-is.)
+
+2) Make sure the PRU is enabled. Minimal command (as root):
+
+   echo BB-BONE-PRU-01 >/sys/devices/bone_capemgr.9/slots
+
+3) Run as root:
+
+   sudo ./example
+
+If it's working correctly, you should see output like:
+
+waiting for interrupt from PRU0...
+PRU program completed, event number 1
+
+It should take ~5 seconds between the first line and the second. The event
+number will increase each time you run it.
+
+Questions or comments welcome. Contact me by email: dhenke@mythopoeic.org
