@@ -9,7 +9,7 @@
  *   reboot of the Beaglebone, to enable access to the PRU.
  *
  * Usage:
- *   ./sudo runpru pru0.bin pru1.bin
+ *   ./sudo runtwo pru0.bin pru1.bin
  *
  * By Ben Kovitz, August 2015, starting from example PRU code by Douglas
  * Henke available at:
@@ -33,7 +33,7 @@ unsigned int *pru0_data_ram;
 unsigned int *pru1_data_ram;
 
 void usage() {
-  fprintf(stderr, "usage: runpru pru0.bin [pru1.bin]\n\nEach .bin must be an assembled .p file.\n");
+  fprintf(stderr, "usage: runtwo pru0.bin [pru1.bin]\n\nEach .bin must be an assembled .p file.\n");
   exit(2);
 }
 
