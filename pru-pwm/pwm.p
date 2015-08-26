@@ -69,9 +69,12 @@ DELAY2:
 	SUB	r5, r5, 1	// bump delay counter
 	QBNE	DELAY2, r5, 0	// not done with delay yet?
 
-	SUB	r1, r1, 1	// bump main loop counter
-	QBNE	MAIN_LOOP, r1, 0  // more iterations?
+	QBA	MAIN_LOOP
+
+//	SUB	r1, r1, 1	// bump main loop counter
+//	QBNE	MAIN_LOOP, r1, 0  // more iterations?
 
         // tell host we're done, then halt
-	MOV	R31.b0, PRU0_R31_VEC_VALID | SIGNUM
+	//MOV	R31.b0, PRU0_R31_VEC_VALID | SIGNUM
+	//MOV	R31.b0, PRU0_R31_VEC_VALID | 4  // EVTOUT1?
 	HALT
