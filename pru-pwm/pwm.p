@@ -52,21 +52,22 @@ START:
 	MOV	r3, (1 << PIN_BIT)
 
 MAIN_LOOP:
+	LBCO	r5, C24, 0, 8	// r5 = hi_delay, r6 = lo_delay
 	MOV	r4, GPIO1 | GPIO_SETDATAOUT
 	SBBO	r3, r4, 0, 4	// send BIT28 to "set bit" address
 
-	MOV	r2, DELAYCOUNT1	// delay counter
+	//MOV	r2, DELAYCOUNT1	// delay counter
 DELAY1:
-	SUB	r2, r2, 1	// bump delay counter
-	QBNE	DELAY1, r2, 0 	// not done with delay yet?
+	SUB	r6, r6, 1	// bump delay counter
+	QBNE	DELAY1, r6, 0 	// not done with delay yet?
 
 	MOV	r4, GPIO1 | GPIO_CLEARDATAOUT
 	SBBO	r3, r4, 0, 4	// send BIT28 to "clear bit" address
 
-	MOV	r2, DELAYCOUNT2	// delay counter
+	//MOV	r2, DELAYCOUNT2	// delay counter
 DELAY2:
-	SUB	r2, r2, 1	// bump delay counter
-	QBNE	DELAY2, r2, 0	// not done with delay yet?
+	SUB	r5, r5, 1	// bump delay counter
+	QBNE	DELAY2, r5, 0	// not done with delay yet?
 
 	SUB	r1, r1, 1	// bump main loop counter
 	QBNE	MAIN_LOOP, r1, 0  // more iterations?

@@ -18,12 +18,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 //#include <pruss/prussdrv.h>
 //#include <pruss/pruss_intc_mapping.h>
 #include <prussdrv.h>
 #include <pruss_intc_mapping.h>
 
 #define PRU_NUM 0 /* which of the two PRUs are we using? */
+
+
+typedef struct {
+  unsigned int hi_delay;  // number of PRU loop iterations during pulse
+  unsigned int lo_delay;  // number of PRU loop iterations between pulses
+    // Each loop iteration takes 2 PRU clock cycles, or 10 ns.
+} PRU_DELAYS;
+
+PRU_DELAYS *pruDataMem;              // Will point to PRU DATA RAM
+//unsigned int *pruDataMem_int;  // Will point to PRU DATA RAM
+
 
 /*** pru_setup() -- initialize PRU and interrupt handler
 
@@ -60,6 +72,12 @@ static int pru_setup(const char * const path) {
       fprintf(stderr, "prussdrv_pruintc_init() failed\n");
       return rtn;
    }
+
+   /* map PRU DATA RAM */
+   prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, (void**)&pruDataMem);
+   //pruDataMem[0] = 0x01020304;
+   pruDataMem->hi_delay = 1000;
+   pruDataMem->lo_delay = 19000;
 
    /* load and run the PRU program */
    if((rtn = prussdrv_exec_program(PRU_NUM, path)) < 0) {
@@ -130,6 +148,25 @@ int old_main(int argc, char **argv) {
    return pru_cleanup();
 }
 
+#define CLOCKS_PER_uS 200 // clock cycles per microsecond (200 MHz PRU clock)
+#define CLOCKS_PER_LOOP 2 // loop contains two instructions, one clock each
+
+void set_pulse_width(unsigned int pulse_width) {  // 0..1000 uS
+   // Actual pulse width is 1 ms + pulse_width. Total PWM cycle time
+   // is always 20 ms.
+  pruDataMem->hi_delay =
+      (1000 + pulse_width) * CLOCKS_PER_uS / CLOCKS_PER_LOOP;
+  pruDataMem->lo_delay =
+      (19000 - pulse_width) * CLOCKS_PER_uS / CLOCKS_PER_LOOP;
+  printf("hi_delay=%d lo_delay=%d\n",
+      pruDataMem->hi_delay, pruDataMem->lo_delay);
+}
+
+void sleep_tenths(unsigned int tenths) {  // tenths of a second
+   static const struct timespec sleep_time = { 0, 100000000 };
+   nanosleep(&sleep_time, NULL);
+}
+
 void usage() {
   fprintf(stderr, "usage: pru file.bin\n\nfile.bin must be an assembled .p file.\n");
   exit(2);
@@ -153,6 +190,12 @@ int main(int argc, char **argv) {
       return -1;
    }
 
+   int pulse_width;
+   for (pulse_width = 0; pulse_width <= 1000; pulse_width += 50) {
+     set_pulse_width(pulse_width);
+     sleep_tenths(1);
+   }
+
    /* wait for PRU to assert the interrupt to indicate completion */
    printf("waiting for interrupt from PRU0...\n");
 
@@ -163,6 +206,11 @@ int main(int argc, char **argv) {
    rtn = prussdrv_pru_wait_event(PRU_EVTOUT_0);
 
    printf("PRU program completed, event number %d\n", rtn);
+
+   //int *pruDataMem_int = (int*)pruDataMem;
+
+   //printf("Contents of PRU DATA RAM: %08x\n", pruDataMem[0]);
+   printf("Contents of PRU DATA RAM: %08x\n", pruDataMem->hi_delay);
 
    /* clear the event, disable the PRU and let the library clean up */
    return pru_cleanup();
