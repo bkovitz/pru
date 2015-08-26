@@ -60,8 +60,8 @@ void set_pulse_width(unsigned int pulse_width) {  // 0..1000 uS
       (1000 + pulse_width) * CLOCKS_PER_uS / CLOCKS_PER_LOOP;
   pru_delays->lo_delay =
       (19000 - pulse_width) * CLOCKS_PER_uS / CLOCKS_PER_LOOP;
-  printf("hi_delay=%d lo_delay=%d\n",
-      pru_delays->hi_delay, pru_delays->lo_delay);
+//  printf("hi_delay=%d lo_delay=%d\n",
+//      pru_delays->hi_delay, pru_delays->lo_delay);
 }
 
 void sleep_tenths(unsigned int tenths) {  // tenths of a second
@@ -70,25 +70,21 @@ void sleep_tenths(unsigned int tenths) {  // tenths of a second
 }
 
 int main(int argc, char **argv) {
-  int rtn;
-
-  /* prussdrv_init() will segfault if called with EUID != 0 */
   if (geteuid()) {
-    fprintf(stderr, "%s must be run as root to use prussdrv\n", argv[0]);
-    return -1;
+    fprintf(stderr, "%s must be run as root\n", argv[0]);
+    return 1;
   }
 
-  /* initialize PRU */
-  if ((rtn = prussdrv_init()) != 0) {
-    fprintf(stderr, "prussdrv_init() failed\n");
-    return rtn;
+  if (prussdrv_init() != 0) {
+    perror("prussdrv_init() failed");
+    return 1;
   }
 
-  /* Open the interrupt. This is needed to initialize the PRU even though
-   * we're not using the interrupt. */
-  if ((rtn = prussdrv_open(PRU_EVTOUT_0)) != 0) {
-    fprintf(stderr, "prussdrv_open() failed\n");
-    return rtn;
+  /* Open the EVTOUT_0 interrupt. This is needed to initialize the PRU even
+   * though we're not using EVTOUT_0. */
+  if (prussdrv_open(PRU_EVTOUT_0) != 0) {
+    perror("prussdrv_open(PRU_EVTOUT_0)");
+    return 1;
   }
 
   /* map PRU DATA RAM */
@@ -98,10 +94,9 @@ int main(int argc, char **argv) {
    * so we don't signal the servo to turn further than it can go. */
   set_pulse_width(0);
 
-  /* load and run the PRU program */
-  if ((rtn = prussdrv_exec_program(PRU0, pwm_binary_path)) < 0) {
+  if (prussdrv_exec_program(PRU0, pwm_binary_path) < 0) {
     fprintf(stderr, "prussdrv_exec_program() failed\n");
-    return rtn;
+    return 1;
   }
 
   /* Run the servo through its range. */
@@ -111,7 +106,6 @@ int main(int argc, char **argv) {
     sleep_tenths(1);
   }
 
-  /* clean up and exit */
   prussdrv_pru_clear_event(PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
   prussdrv_pru_disable(PRU0);
   prussdrv_exit();
