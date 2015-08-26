@@ -1,28 +1,9 @@
-// Runs PRU1.
-
-/***
-   Copyright (c) 2014 dhenke@mythopoeic.org
-   This is free software -- see COPYING for details.
-
-   example -- demonstrate simple use of AM335x PRU_ICSS by waiting 5s
-
-   usage: sudo ./example
-
-   Runs a very simple PRU program (expected to be in a file pwm.bin
-   in the current working directory) then waits for this program to assert
-   PRU_EVTOUT_1. When it does so, cleans up and exits.
-
-   The PRU program simply delays for five seconds. (So, if you run this
-   and it takes much more or less time than that to exit, you know something
-   is amiss.)
-***/
+// Runs up to two programs on the PRU simultaneously.
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
-//#include <pruss/prussdrv.h>
-//#include <pruss/pruss_intc_mapping.h>
 #include <prussdrv.h>
 #include <pruss_intc_mapping.h>
 

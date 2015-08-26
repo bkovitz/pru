@@ -1,26 +1,24 @@
 CFLAGS+=-Wall -Werror
 LDLIBS+= -lpthread -lprussdrv
 
-run: servo
+dualtest: runtwo pru0.bin pru1.bin
+	sudo ./runtwo pru0.bin pru1.bin
+
+runservo: servo
 	sudo ./servo
 
 servo: servo.o pwm.bin
 	$(CC) $(CFLAGS) -o servo servo.o $(LDLIBS)
 
-pwm: pwm.bin main1
-	sudo ./main1 pwm.bin
-	
-mem: mem.bin main1
-	sudo ./main1 mem.bin
-
+#pwm: pwm.bin runpru
+#	sudo ./runpru pwm.bin
+#	
+#mem: mem.bin runpru
+#	sudo ./runpru mem.bin
 
 %.bin: %.p
 	pasm -b $^
 
-main: main.o
-
-main1: main1.o
-
 clean:
-	rm -f main *.o *.bin
+	rm -f runpru servo *.o *.bin
 
