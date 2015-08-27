@@ -3,9 +3,9 @@
  *
  * Before running:
  *   Connect servo as follows:
- *     GND (brown wire) to BeagleBone P9.0 (GND)
- *     PWR (red wire)   to 5 VDC power source (not BeagleBone)
- *     SIGNAL (yellow wire) to BeagleBone P9.26 (GPIO1[28])
+ *     GND (brown wire)     to BeagleBone P9.0 (GND)
+ *     PWR (red wire)       to 5 VDC power source (not BeagleBone)
+ *     SIGNAL (yellow wire) to BeagleBone P9.12 (GPIO1[28])
  *
  *   The enable_pru01 script must have been run. It's only needed once per
  *   reboot of the Beaglebone, to enable access to the PRU.

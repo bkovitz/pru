@@ -7,11 +7,7 @@
 .origin 0 // offset of the start of the code in PRU memory
 .entrypoint START // program entry point, used by debugger only
 
-// Memory-mapped GPIO
-#define GPIO1 0x4804c000
-#define GPIO_OE 0x134
-#define GPIO_SETDATAOUT 0x190
-#define GPIO_CLEARDATAOUT 0x194
+#include "gpio.hp"
 
 // We'll toggle GPIO1[28], which is P9.12 on the BeagleBone connectors.
 #define PIN_BIT 28
@@ -31,8 +27,10 @@ START:
 	MOV	r3, (1 << PIN_BIT)
 
 MAIN_LOOP:
-				// read PRU DATA RAM
+	// Read PRU DATA RAM.
 	LBCO	r5, C24, 0, 8	// r5 = hi_delay, r6 = lo_delay
+
+	// LO part of PWM.
 	MOV	r4, GPIO1 | GPIO_SETDATAOUT
 	SBBO	r3, r4, 0, 4	// send BIT28 to "set bit" address
 
@@ -40,6 +38,7 @@ DELAY1:
 	SUB	r6, r6, 1	// bump delay counter
 	QBNE	DELAY1, r6, 0 	// not done with delay yet?
 
+	// HI part of PWM (the pulse).
 	MOV	r4, GPIO1 | GPIO_CLEARDATAOUT
 	SBBO	r3, r4, 0, 4	// send BIT28 to "clear bit" address
 

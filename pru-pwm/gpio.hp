@@ -1,0 +1,17 @@
+// Memory-mapped GPIO
+#define GPIO1 0x4804c000
+
+// Offsets
+#define GPIO_OE 0x134
+#define GPIO_DATAIN 0x138
+#define GPIO_SETDATAOUT 0x190
+#define GPIO_CLEARDATAOUT 0x194
+
+
+// To signal the host that we're done, we set bit 5 in our R31
+// simultaneously with putting the number of the signal we want
+// into R31 bits 0-3. See 5.2.2.2 in AM335x PRU-ICSS Reference Guide.
+#define PRU_R31_VEC_VALID (1<<5)
+#define PRU_EVTOUT_0 3
+#define PRU_EVTOUT_1 4
+
