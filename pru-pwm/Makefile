@@ -1,8 +1,8 @@
 CFLAGS+=-Wall -Werror -O3 -std=gnu99
 LDLIBS+= -lpthread -lprussdrv
 
-run: sample
-	sudo ./sample
+run: loopback
+	sudo ./loopback
 
 runservo: servo
 	sudo ./servo
@@ -13,14 +13,11 @@ servo: servo.o pwm.o
 sample: sample.o prusample.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+loopback: loopback.o pwm.o samplecount.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 dualtest: runtwo pru0.bin pru1.bin
 	sudo ./runtwo pru0.bin pru1.bin
-
-#pwm: pwm.bin runpru
-#	sudo ./runpru pwm.bin
-#	
-#mem: mem.bin runpru
-#	sudo ./runpru mem.bin
 
 %.bin: %.p
 	pasm -b $^
@@ -28,6 +25,7 @@ dualtest: runtwo pru0.bin pru1.bin
 %.c: %.bin
 	xxd -i $^ > $@
 
+# Disable built-in Pascal compilation rule
 %.o: %.p
 
 clean:

@@ -40,8 +40,6 @@ typedef struct {
 
 PRU_DELAYS *pru_delays;     // Will point to PRU DATA RAM
 
-char* pwm_binary_path = "pwm.bin";
-
 
 #define CLOCKS_PER_uS 200 // clock cycles per microsecond (200 MHz PRU clock)
 #define CLOCKS_PER_LOOP 2 // loop contains two instructions, one clock each
@@ -66,6 +64,7 @@ void set_pulse_width(unsigned int pulse_width) {  // 0..1000 uS
 //      pru_delays->hi_delay, pru_delays->lo_delay);
 }
 
+// TODO FIX: This ignores 'tenths'.
 void sleep_tenths(unsigned int tenths) {  // tenths of a second
    static const struct timespec sleep_time = { 0, 100000000 };
    nanosleep(&sleep_time, NULL);
