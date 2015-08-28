@@ -1,8 +1,13 @@
 CFLAGS+=-Wall -Werror -O3 -std=gnu99
 LDLIBS+= -lpthread -lprussdrv
 
-run: loopback
+run: logstamps
+	sudo ./logstamps
+
+runloopback: loopback
 	sudo ./loopback
+
+all: servo sample loopback runtwo logstamps
 
 runservo: servo
 	sudo ./servo
@@ -14,6 +19,9 @@ sample: sample.o prusample.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 loopback: loopback.o pwm.o samplecount.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+logstamps: logstamps.o tcrr.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 dualtest: runtwo pru0.bin pru1.bin

@@ -7,7 +7,7 @@
 .origin 0 // offset of the start of the code in PRU memory
 .entrypoint START // program entry point, used by debugger only
 
-#include "gpio.hp"
+#include "constants.h"
 
 // We'll toggle GPIO1[28], which is P9.12 on the BeagleBone connectors.
 #define PIN_BIT 28

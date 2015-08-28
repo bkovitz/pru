@@ -7,7 +7,7 @@
 .origin 0 		// offset of the start of the code in PRU memory
 .entrypoint start	// program entry point, used by debugger only
 
-#include "gpio.hp"
+#include "constants.h"
 
 #define PIN_BIT 16
 
