@@ -19,9 +19,14 @@ start:
 	lbbo	r2, r0, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
 	sbco	r2, c24, r1.b0, 12	// write to pru1_data_mem
 
-	mov	r0, DMTIMER2		// r0 -> DMTIMER2 block
+//	mov	r0, DMTIMER2		// r0 -> DMTIMER2 block
 	add	r1, r1, 12		// r1 = offset into pru1_data_mem
-	lbbo	r2, r0, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
+//	lbbo	r2, r0, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
+//	sbco	r2, c24, r1, 12		// write to pru1_data_mem
+
+	// Slightly better way to access DMTIMER2, exploiting the fact that
+	// c1 -> DMTIMER2.
+	lbco	r2, c1, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
 	sbco	r2, c24, r1, 12		// write to pru1_data_mem
 
 	mov	r0, DMTIMER3		// r0 -> DMTIMER3 block
