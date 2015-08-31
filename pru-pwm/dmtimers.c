@@ -42,9 +42,15 @@ typedef struct {
   unsigned int tclr;  // timer control register
   unsigned int tcrr;  // timer counter register
   unsigned int tldr;  // timer load register
+  unsigned int clkctrl;  // CM_PER_TIMER_CLKCTRL from CM_PER
 } DMTIMER_INFO;
 
-DMTIMER_INFO *pru1_data_ram;
+typedef struct {
+  unsigned int l4s_clkstctrl; // CM_PER_L4LS_CLKSTCTRL
+  DMTIMER_INFO dmtimer_infos[7];
+} PRU_RAM;
+
+PRU_RAM *pru1_data_ram;
 
 void sleep_millis(unsigned int millis) {  // milliseconds
    const struct timespec sleep_time = { 0, millis * 1000000 };
@@ -56,6 +62,18 @@ void print_dmtimer_info(const char *name, DMTIMER_INFO *dmtimer_info) {
   printf("  TCLR = 0x%08x\n", dmtimer_info-> tclr);
   printf("  TCRR = 0x%08x\n", dmtimer_info-> tcrr);
   printf("  TLDR = 0x%08x\n", dmtimer_info-> tldr);
+  printf("  CLKCTRL = 0x%08x\n", dmtimer_info->clkctrl);
+}
+
+void print_pru_ram() {
+  printf("CM_PER_L4LS_CLKSTCTRL = 0x%08x\n", pru1_data_ram->l4s_clkstctrl);
+  print_dmtimer_info("DMTIMER0", &pru1_data_ram->dmtimer_infos[0]);
+  print_dmtimer_info("DMTIMER2", &pru1_data_ram->dmtimer_infos[1]);
+  print_dmtimer_info("DMTIMER3", &pru1_data_ram->dmtimer_infos[2]);
+  print_dmtimer_info("DMTIMER3", &pru1_data_ram->dmtimer_infos[3]);
+  print_dmtimer_info("DMTIMER5", &pru1_data_ram->dmtimer_infos[4]);
+  print_dmtimer_info("DMTIMER6", &pru1_data_ram->dmtimer_infos[5]);
+  print_dmtimer_info("DMTIMER7", &pru1_data_ram->dmtimer_infos[6]);
 }
 
 void run_pru(unsigned pru, unsigned evtout) {
@@ -69,13 +87,7 @@ void run_pru(unsigned pru, unsigned evtout) {
 
   printf("PRU%d program completed, event number %d\n", pru, pru_result1);
 
-  print_dmtimer_info("DMTIMER0", &pru1_data_ram[0]);
-  print_dmtimer_info("DMTIMER2", &pru1_data_ram[1]);
-  print_dmtimer_info("DMTIMER3", &pru1_data_ram[2]);
-  print_dmtimer_info("DMTIMER3", &pru1_data_ram[3]);
-  print_dmtimer_info("DMTIMER5", &pru1_data_ram[4]);
-  print_dmtimer_info("DMTIMER6", &pru1_data_ram[5]);
-  print_dmtimer_info("DMTIMER7", &pru1_data_ram[6]);
+  print_pru_ram();
 }
 
 int main(int argc, char **argv) {
@@ -111,12 +123,12 @@ int main(int argc, char **argv) {
   }
 
   run_pru(PRU1, PRU_EVTOUT_1);
-  int first_count = pru1_data_ram[1].tcrr;
+  int first_count = pru1_data_ram->dmtimer_infos[1].tcrr;
   printf("\n");
   sleep(1);
   run_pru(PRU1, PRU_EVTOUT_1);
   printf("\n");
-  int second_count = pru1_data_ram[1].tcrr;
+  int second_count = pru1_data_ram->dmtimer_infos[1].tcrr;
   printf("DMTIMER2.TCRR difference: %d\n", second_count - first_count);
 
   prussdrv_pru_disable(PRU1);

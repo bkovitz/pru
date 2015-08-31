@@ -11,6 +11,19 @@
 #define GPIO_CLEARDATAOUT 0x194
 
 
+// Power, reset, and clock management (PRCM)
+#define CM_PER 0x44e00000  // Clock module for peripherals
+
+//offsets
+#define CM_PER_L4LS_CLKSTCTRL 0x00  // L4 clock source state control register?
+#define CM_PER_TIMER2_CLKCTRL 0x80  // register that controls DMTIMER2 source
+#define CM_PER_TIMER3_CLKCTRL 0x84  // etc.
+#define CM_PER_TIMER4_CLKCTRL 0x88
+#define CM_PER_TIMER5_CLKCTRL 0xec
+#define CM_PER_TIMER6_CLKCTRL 0xf0
+#define CM_PER_TIMER7_CLKCTRL 0x7c
+
+
 // Timers
 #define DMTIMER0 0x44e05000
 #define DMTIMER1_1MS 0x44e31000
@@ -26,10 +39,6 @@
 #define TCRR 0x3c   // timer counter register
 #define TLDR 0x40   // timer load register
 #define TTGR 0x44   // timer trigger register
-
-
-// Clock control
-#define CM_PER_TIMER2_CLKCTRL 
 
 
 // Interrupts

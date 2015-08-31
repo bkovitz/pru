@@ -13,46 +13,56 @@ start:
 	clr	r0, r0, 4
 	sbco	r0, c4, 4, 4
 
-	mov	r0, DMTIMER0	// r0 -> DMTIMER0 block
 	mov	r1, 0		// r1 = offset into pru1_data_mem of where
-				//   to store data from DMTIMER block
+				//   to store data
+	mov	r10, CM_PER	// r10 -> CM_PER block
+
+	lbbo	r2, r0, CM_PER_L4LS_CLKSTCTRL, 4  // r2 = clock status reg.
+	sbco	r2, c24, r1, 4	// copy to pru1_data_mem
+	add	r1, r1, 4	// r1 = offset of where to put next data
+				//   in pru1_data_mem
+
+	mov	r0, DMTIMER0	// r0 -> DMTIMER0 block
 	lbbo	r2, r0, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
-	sbco	r2, c24, r1.b0, 12	// write to pru1_data_mem
+	mov	r5, 0xdeadbeef		// DMTIMER0 has no source control
+	sbco	r2, c24, r1, 16		// write to pru1_data_mem
+	add	r1, r1, 16
 
-//	mov	r0, DMTIMER2		// r0 -> DMTIMER2 block
-	add	r1, r1, 12		// r1 = offset into pru1_data_mem
-//	lbbo	r2, r0, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
-//	sbco	r2, c24, r1, 12		// write to pru1_data_mem
-
-	// Slightly better way to access DMTIMER2, exploiting the fact that
+	// This is the good way to access DMTIMER2, exploiting the fact that
 	// c1 -> DMTIMER2.
 	lbco	r2, c1, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
-	sbco	r2, c24, r1, 12		// write to pru1_data_mem
+	lbbo	r5, r10, CM_PER_TIMER2_CLKCTRL, 4  // r5 = CLKCTRL reg
+	sbco	r2, c24, r1, 16		// write to pru1_data_mem
+	add	r1, r1, 16
 
 	mov	r0, DMTIMER3		// r0 -> DMTIMER3 block
-	add	r1, r1, 12		// ...and so on
-	lbbo	r2, r0, TCLR, 12
-	sbco	r2, c24, r1, 12	
+	lbbo	r2, r0, TCLR, 12	// r2..r4 = TCLR, TCRR, TLDR
+	lbbo	r5, r10, CM_PER_TIMER3_CLKCTRL, 4 // r5 = CLKCTRL reg
+	sbco	r2, c24, r1, 16		// and so on...
+	add	r1, r1, 16
 
-	mov	r0, DMTIMER4	
-	add	r1, r1, 12	
+	mov	r0, DMTIMER4
 	lbbo	r2, r0, TCLR, 12
-	sbco	r2, c24, r1, 12	
+	lbbo	r5, r10, CM_PER_TIMER4_CLKCTRL, 4
+	sbco	r2, c24, r1, 16
+	add	r1, r1, 16
 
-	mov	r0, DMTIMER5	
-	add	r1, r1, 12	
+	mov	r0, DMTIMER5
 	lbbo	r2, r0, TCLR, 12
-	sbco	r2, c24, r1, 12	
+	lbbo	r5, r10, CM_PER_TIMER5_CLKCTRL, 4
+	sbco	r2, c24, r1, 16
+	add	r1, r1, 16
 
-	mov	r0, DMTIMER6	
-	add	r1, r1, 12	
+	mov	r0, DMTIMER6
 	lbbo	r2, r0, TCLR, 12
-	sbco	r2, c24, r1, 12	
+	lbbo	r5, r10, CM_PER_TIMER6_CLKCTRL, 4
+	sbco	r2, c24, r1, 16
+	add	r1, r1, 16
 
-	mov	r0, DMTIMER7	
-	add	r1, r1, 12	
+	mov	r0, DMTIMER7
 	lbbo	r2, r0, TCLR, 12
-	sbco	r2, c24, r1, 12	
+	lbbo	r5, r10, CM_PER_TIMER7_CLKCTRL, 4
+	sbco	r2, c24, r1, 16
 
         // Tell host we're done, then halt.
 	mov	r31.b0, PRU_R31_VEC_VALID | PRU_EVTOUT_1
