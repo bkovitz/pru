@@ -1,7 +1,10 @@
 CFLAGS+=-Wall -Werror -O3 -std=gnu99
 LDLIBS+= -lpthread -lprussdrv
 
-run: logstamps
+rundmtimers: dmtimers
+	sudo ./dmtimers
+
+runlogstamps: logstamps
 	sudo ./logstamps
 
 runloopback: loopback
@@ -19,6 +22,9 @@ sample: sample.o prusample.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 loopback: loopback.o pwm.o samplecount.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+dmtimers: dmtimers.o timerblock.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 logstamps: logstamps.o tcrr.o

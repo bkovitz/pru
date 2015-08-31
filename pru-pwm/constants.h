@@ -28,6 +28,9 @@
 #define TTGR 0x44   // timer trigger register
 
 
+// Clock control
+#define CM_PER_TIMER2_CLKCTRL 
+
 
 // Interrupts
 
