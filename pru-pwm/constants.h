@@ -13,15 +13,26 @@
 
 // Power, reset, and clock management (PRCM)
 #define CM_PER 0x44e00000  // Clock module for peripherals
+#define CM_DPLL 0x44e00500 // Clock module for phase-locked loops
+#define CONTROL_MODULE 0x44e10000 // Control module (AM335x Tech Ref sec. 9)
 
 //offsets
-#define CM_PER_L4LS_CLKSTCTRL 0x00  // L4 clock source state control register?
-#define CM_PER_TIMER2_CLKCTRL 0x80  // register that controls DMTIMER2 source
-#define CM_PER_TIMER3_CLKCTRL 0x84  // etc.
+#define CM_PER_L4LS_CLKSTCTRL 0x00  // L4 clock state control register?
+#define CM_PER_TIMER2_CLKCTRL 0x80  // timer activity registers...
+#define CM_PER_TIMER3_CLKCTRL 0x84
 #define CM_PER_TIMER4_CLKCTRL 0x88
 #define CM_PER_TIMER5_CLKCTRL 0xec
 #define CM_PER_TIMER6_CLKCTRL 0xf0
 #define CM_PER_TIMER7_CLKCTRL 0x7c
+
+#define CLKSEL_TIMER2_CLK 0x08  // timer clock source registers...
+#define CLKSEL_TIMER3_CLK 0x0c
+#define CLKSEL_TIMER4_CLK 0x10
+#define CLKSEL_TIMER5_CLK 0x18
+#define CLKSEL_TIMER6_CLK 0x1c
+#define CLKSEL_TIMER7_CLK 0x04
+
+#define CONTROL_STATUS 0x40  // contains clock freq info
 
 
 // Timers
