@@ -7,14 +7,6 @@
 
 #include "constants.h"
 
-.struct DMTIMER_struct
-	.u32	_TCLR
-	.u32	_TCRR
-	.u32	_TLDR
-.ends
-
-#define NUM_SAMPLES 100
-
 start:
 	// Clear STANDBY_INIT in SYSCFG so PRU can access main memory.
 	lbco	r0, c4, 4, 4

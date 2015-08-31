@@ -4,9 +4,6 @@ LDLIBS+= -lpthread -lprussdrv
 rundmtimers: dmtimers
 	sudo ./dmtimers
 
-runlogstamps: logstamps
-	sudo ./logstamps
-
 runloopback: loopback
 	sudo ./loopback
 
@@ -25,9 +22,6 @@ loopback: loopback.o pwm.o samplecount.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 dmtimers: dmtimers.o timerblock.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
-
-logstamps: logstamps.o tcrr.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 dualtest: runtwo pru0.bin pru1.bin
