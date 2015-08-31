@@ -4,7 +4,7 @@
  * RESULT:
  *   The BeagleBone already has DMTIMER2 running at top speed, with an
  *   interrupt to turn it over on overflow. In 1 sec, it counts
- *   approximately 24,200,000 ticks.
+ *   approximately 24,000,000 ticks.
  *
  *   DMTIMER0 and DMTIMER2..7 are all set to take their clock input from
  *   M_OSC, which is set at 24 Mhz as shown by SYSBOOT[15:14].
