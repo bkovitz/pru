@@ -7,6 +7,8 @@
 // offsets
 #define GPIO_OE 0x134
 #define GPIO_DATAIN 0x138
+#define GPIO_RISINGDETECT 0x148
+#define GPIO_FALLINGDETECT 0x14c
 #define GPIO_SETDATAOUT 0x190
 #define GPIO_CLEARDATAOUT 0x194
 
@@ -33,6 +35,17 @@
 #define CLKSEL_TIMER7_CLK 0x04
 
 #define CONTROL_STATUS 0x40  // contains clock freq info
+#define TIMER_EVT_CAPT 0xfd0  // events captured by timers
+
+// events  (from sec. 9.2.4.4.5 of ARM 335x Technical Reference)
+#define EVENT_GPIO0_1 17
+#define EVENT_GPIO0_2 18
+#define EVENT_GPIO1_1 19
+#define EVENT_GPIO1_2 20
+#define EVENT_GPIO2_1 21
+#define EVENT_GPIO2_2 22
+#define EVENT_GPIO3_1 23
+#define EVENT_GPIO3_2 24
 
 
 // Timers
@@ -45,11 +58,24 @@
 #define DMTIMER6 0x48048000
 #define DMTIMER7 0x4804a000
 
-// offsets
-#define TCLR 0x38   // timer control register
-#define TCRR 0x3c   // timer counter register
-#define TLDR 0x40   // timer load register
-#define TTGR 0x44   // timer trigger register
+// offsets  (from sec. 20.1.5 of ARM 335x Technical Reference)
+#define TIDR 0x00           // timer identification register
+#define TIOCP_CFG 0x10      // timer OCP config register
+#define IRQ_EOI 0x20        // timer IRQ end-of-interrupt register
+#define IRQSTATUS_RAW 0x24  // timer status raw register
+#define IRQSTATUS 0x28      // timer status register
+#define IRQENABLE_SET 0x2c  // timer interrupt enable set register
+#define IRQENABLE_CLR 0x30  // timer interrupt enable clear register
+#define IRQWAKEEN 0x34      // timer IRQ wake-up enable register
+#define TCLR 0x38           // timer control register
+#define TCRR 0x3c           // timer counter register
+#define TLDR 0x40           // timer load register
+#define TTGR 0x44           // timer trigger register
+#define TWPS 0x48           // timer write posting bits register
+#define TMAR 0x4c           // timer match register
+#define TCAR1 0x50          // timer capture register, event 1
+#define TSICR 0x54          // timer synchronous interface control register
+#define TCAR2 0x58          // timer capture register, event 2
 
 
 // Interrupts

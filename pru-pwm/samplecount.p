@@ -1,5 +1,7 @@
 // Monitor and log GPIO1[16], which is pin P9.15 on the BeagleBone connectors.
 //
+// Monitors pulse widths by counting in a tight loop.
+//
 // Raises interrupt PRU_EVTOUT_1 on completion. Measures pulse widths
 // taken during NUM_SAMPLES pulses, and stores the measurements in an array
 // in PRU DATA RAM.

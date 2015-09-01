@@ -1,5 +1,5 @@
 /*
- * BeagleBone loopback PWM test.
+ * BeagleBone loopback PWM test: measure pulse widths by counting on PRU.
  *
  * Generates PWM wave with varying pulse widths at GPIO1[28] (P9.12) and
  * samples at GPIO1[16] (P9.15).
@@ -11,6 +11,10 @@
  *   more than 100,000 loop iterations per pulse (not accessing the GPIO
  *   pin until the loop is done); the PRU that's sampling them is doing
  *   about 5,000 iterations in the same amount of time.
+ *
+ *   Bottom line: By counting in a tight loop on the PRU, the fastest you
+ *   can sample is about 5 MHz. You could get a little faster by sampling
+ *   via R31, but that's limited to special inputs from the ARM.
  *
  * Before running:
  *   The enable_pru01 script must have been run. It's only needed once per
