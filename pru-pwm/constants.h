@@ -84,6 +84,6 @@
 // simultaneously with putting the number of the signal we want
 // into R31 bits 0-3. See 5.2.2.2 in AM335x PRU-ICSS Reference Guide.
 #define PRU_R31_VEC_VALID (1<<5)
-#define PRU_EVTOUT_0 3
-#define PRU_EVTOUT_1 4
+#define PRU_EVTOUT_0_CODE 3
+#define PRU_EVTOUT_1_CODE 4
 

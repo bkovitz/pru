@@ -1,6 +1,9 @@
 CFLAGS+=-Wall -Werror -O3 -std=gnu99
 LDLIBS+= -lpthread -lprussdrv
 
+runloopback2: loopback2
+	sudo ./loopback2
+
 runtcapture: tcapture
 	sudo ./tcapture
 
@@ -24,6 +27,9 @@ sample: sample.o prusample.o
 loopback: loopback.o pwm.o samplecount.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
+loopback2: loopback2.o pwm.o logpulses.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 dmtimers: dmtimers.o timerblock.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -43,5 +49,5 @@ tcapture: tcapture.o timercapt.o
 %.o: %.p
 
 clean:
-	rm -f runtwo servo loopback dmtimers gpiodirect *.o *.bin
+	rm -f runtwo servo loopback dmtimers gpiodirect sample tcapture *.o *.bin
 
