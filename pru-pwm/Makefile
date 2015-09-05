@@ -1,6 +1,9 @@
 CFLAGS+=-Wall -Werror -O3 -std=gnu99
 LDLIBS+= -lpthread -lprussdrv
 
+runthrloopback: thrloopback
+	sudo ./thrloopback
+
 runint: int
 	sudo ./int
 
@@ -16,7 +19,7 @@ rundmtimers: dmtimers
 runloopback: loopback
 	sudo ./loopback
 
-all: servo sample loopback runtwo dmtimers gpiodirect tcapture int
+all: servo sample loopback runtwo dmtimers gpiodirect tcapture int thrloopback
 
 runservo: servo
 	sudo ./servo
@@ -36,6 +39,9 @@ loopback2: loopback2.o pwm.o logpulses.o
 int: int.o intp.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 	
+thrloopback: thrloopback.o pwm.o measurep.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
 dmtimers: dmtimers.o timerblock.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 

@@ -43,7 +43,6 @@ start:
 	mov	r27, GPIO_DATAIN
 	or	r27, input.gpio_base, r27  // r27 -> GPIO input reg
 
-
 input_is_low:
 	lbbo	r2, r27, 0, 4	// read input reg into r2
 	and	r2, r2, r28	// is our pin high?
