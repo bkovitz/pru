@@ -9,6 +9,13 @@
  *   valid data. After the first few reads, you'll get the current fix
  *   each time, no matter how often you call gps_read().
  *
+ *   What cpgs displays as "heading" (the direction you're facing) is
+ *   actually "track" (the direction in which you've been moving).
+ *   Heading is actually provided gps_data_t.attitude, whose validity
+ *   is indicated by ATTITUDE_SET (see the code below).
+ *
+ *   For details, see /usr/include/gps.h.
+ *
  * By Ben Kovitz, September 2015.
  */
 
@@ -77,6 +84,30 @@ void print_devconfig(struct devconfig_t *dc) {
     printf("    %d/%d/%c\n", dc->baudrate, dc->stopbits, dc->parity);
     printf("    cycle %f, mincycle %f\n", dc->cycle, dc->mincycle);
     printf("    driver_mode %s\n", dc->driver_mode ? "native" : "non-native");
+}
+
+void print_attitude(struct attitude_t *att) {
+  printf("  heading %f\n", att->heading);
+  printf("  pitch %f\n", att->pitch);
+  printf("  roll %f\n", att->roll);
+  printf("  yaw %f\n", att->yaw);
+  printf("  dip %f\n", att->dip);
+  printf("  mag_len %f\n", att->mag_len);
+  printf("  mag_x %f\n", att->mag_x);
+  printf("  mag_y %f\n", att->mag_y);
+  printf("  mag_z %f\n", att->mag_z);
+  printf("  acc_len %f\n", att->acc_len);
+  printf("  acc_x %f\n", att->acc_x);
+  printf("  acc_y %f\n", att->acc_y);
+  printf("  acc_z %f\n", att->acc_z);
+  printf("  gyro_x %f\n", att->gyro_x);
+  printf("  gyro_y %f\n", att->gyro_y);
+  printf("  temp %f\n", att->temp);
+  printf("  depth %f\n", att->depth);
+  printf("  mag_st %c\n", att->mag_st);
+  printf("  pitch_st %c\n", att->pitch_st);
+  printf("  roll_st %c\n", att->roll_st);
+  printf("  yaw_st %c\n", att->yaw_st);
 }
 
 void one_gps_cycle(struct gps_data_t *gps_data) {
@@ -187,8 +218,10 @@ void one_gps_cycle(struct gps_data_t *gps_data) {
   if (gps_data->set & SATELLITE_SET)
     puts("SATELLITE_SET");
 
-  if (gps_data->set & ATTITUDE_SET)
+  if (gps_data->set & ATTITUDE_SET) {
     puts("ATTITUDE_SET");
+    print_attitude(&gps_data->attitude);
+  }
 
   if (gps_data->set & VERR_SET)
     puts("VERR_SET");
