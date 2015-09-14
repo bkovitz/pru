@@ -1,4 +1,7 @@
-CFLAGS+=-Wall -Werror -O3 -std=gnu99
+ALL=servo sample loopback runtwo dmtimers gpiodirect tcapture int \
+	thrloopback seegps
+
+CFLAGS+=-Wall -Werror -O3 -std=gnu99 -lm -lgps
 LDLIBS+= -lpthread -lprussdrv
 
 runthrloopback: thrloopback
@@ -19,10 +22,10 @@ rundmtimers: dmtimers
 runloopback: loopback
 	sudo ./loopback
 
-all: servo sample loopback runtwo dmtimers gpiodirect tcapture int thrloopback
-
 runservo: servo
 	sudo ./servo
+
+all: $(ALL)
 
 servo: servo.o pwm.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
@@ -61,5 +64,5 @@ tcapture: tcapture.o timercapt.o
 %.o: %.p
 
 clean:
-	rm -f runtwo servo loopback dmtimers gpiodirect sample tcapture *.o *.bin
+	rm -f $(ALL) *.o *.bin
 
