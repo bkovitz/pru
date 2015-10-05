@@ -1,0 +1,20 @@
+\documentclass[letterpaper,11pt,fleqn]{article}
+
+\title{Real-time Programming with the PRU \\ on the Beaglebone}
+\author{Ben Kovitz}
+\date{September 2015}
+
+\begin{document}
+\maketitle
+
+The examples in this document generate and capture PWM pulses on the PRU.
+This is probably not the best way to do PWM on an ARM-334x processor: it has a
+built-in PWM unit for that. However, using the PRU to perform PWM does
+illustrate real-time programming on a very simple but highly timing-sensitive
+example.
+
+The PRU does not support interrupts. Interrupts would complicate real-time
+processing and make response times unpredictable. Instead, the PRU must poll
+sources of interrupts. The documentation still calls them ``interrupts'' and 
+the PRU has an ``interrupt controller'' (INTC) to track and prioritize them.
+\end{document}
