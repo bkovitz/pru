@@ -1,20 +1,187 @@
 \documentclass[letterpaper,11pt,fleqn]{article}
 
-\title{Real-time Programming with the PRU \\ on the Beaglebone}
+\usepackage{listings}
+\lstset{basicstyle=\footnotesize\ttfamily}
+
+\usepackage{enumitem}
+\usepackage{tabulary}
+\usepackage{siunitx}
+
+\usepackage{hyperref}
+\usepackage{url}
+\urlstyle{sf}
+
+\newcommand{\techref}{\textit{AM335x Technical Reference Manual}}
+
+\newenvironment{docref}
+   {\vspace{\baselineskip}\noindent\begin{minipage}{\textwidth}\raggedright}
+   {\end{minipage}}
+
+\title{Real-Time Programming with the PRU \\ on the Beaglebone}
 \author{Ben Kovitz}
 \date{September 2015}
 
 \begin{document}
 \maketitle
 
-The examples in this document generate and capture PWM pulses on the PRU.
-This is probably not the best way to do PWM on an ARM-334x processor: it has a
-built-in PWM unit for that. However, using the PRU to perform PWM does
-illustrate real-time programming on a very simple but highly timing-sensitive
-example.
+\tableofcontents
+
+\section{Introduction}
+
+This document shows you how to use the the PRU (Programmable Real-time Unit)
+of the AM3358 Sitara processor on a BeagleBone Black to do real-time
+programming.
+
+The example code in this document generates and captures PWM (Pulse-Width
+Modulation): one PRU generates pulses while the other PRU captures pulses.
+Code running concurrently on the ARM processor sets outgoing pulse widths and
+reads measurements of incoming pulse widths through memory shared with the
+PRU.  This is probably not the best way to do PWM on an AM3358: the AM3358 has
+a built-in PWM unit just for this kind of task, so the PRU really isn't
+necessary. However, using the PRU to perform PWM does illustrate real-time
+programming on a very simple but highly timing-sensitive example. It should be
+straightforward to modify the examples presented here to make the PRU perform
+tasks with hard real-time constraints of about 24~MHz while the ARM runs Linux
+concurrently.
+
+\subsection{Must-have documentation}
+
+These are the authoritative manuals from Texas Instruments:
+
+\nopagebreak
+\begin{docref}
+\techref \\
+\url{http://www.ti.com/lit/ug/spruh73l/spruh73l.pdf} \\
+4,972 pages, including all memory maps, but it still doesn't explain everything.
+\end{docref}
+
+\begin{docref}
+\textit{AM335x PRU-ICSS Reference Guide} \\
+\url{https://github.com/beagleboard/am335x\_pru\_package/blob/master/am335xPruReferenceGuide.pdf} \\
+Includes complete documentation of the PRU instruction set.
+\end{docref}
+
+\begin{docref}
+\textit{PRU Assembly Instructions} \\
+\url{http://processors.wiki.ti.com/index.php/PRU\_Assembly\_Instructions} \\
+A more-convenient description of the PRU instruction set.
+\end{docref}
+
+\begin{docref}
+\textit{PRU Linux Application Loader API Guide} \\
+\url{http://processors.wiki.ti.com/index.php/PRU\_Linux\_Application\_Loader\_API\_Guide} \\
+The C API for loading programs into PRU memory, enabling and disabling the
+PRUs, etc.
+\end{docref}
+
+\vspace{\baselineskip}
+\noindent
+For hooking up hardware, you'll also need BeagleBoard's
+documentation:
+
+\begin{docref}
+\textit{BeagleBone Rev A6 System Reference Manual} \\
+\url{http://beagleboard.org/static/beaglebone/latest/Docs/Hardware/BONE\_SRM.pdf}
+\end{docref}
+
+\vspace{\baselineskip}
+\noindent
+The pinouts of the P8 and P9 expansion boards are explained on pp.~54--63.
+Convenient spreadsheet forms of the pinouts are here:
+\url{http://www.embedded-things.com/bbb/beaglebone-black-pin-mux-spreadsheet/}.
+
+\subsection{PRU background}
+
+The PRU is itself a microprocessor with a relatively simple instruction set.
+The AM335x contains two PRUs in addition to an ARM Cortex-A8 microprocessor.
+Each PRU has 32 registers, each 32 bits wide, and each instruction is 32 bits
+wide.
+
+The PRU runs at 200~MHz, has four buses, and no pipeline. Most
+instructions take only one clock cycle despite the lack of a pipeline. Since
+there is no pipeline, calculating the time required to execute PRU code is
+often as simple as counting the instructions and multiplying by
+\SI{5}{\nano\second}. The PRU even has a single-clock-cycle integer multiply
+instruction.
+
+The AM335x has four memory spaces:
+
+{
+\renewcommand{\arraystretch}{1.5}
+\small
+\nopagebreak
+\vspace{\baselineskip}
+\begin{tabulary}{\dimexpr\textwidth-\parindent\relax}{LLLJ}
+level & address space & min. latency & \\
+\hline
+L1~\begin{minipage}[t]{1.5in}Instruction \& \\ Data Cache\end{minipage}
+& 32K & single-cycle & Includes PRU instructions and scratchpad registers. \\
+L2 Cache & 256K & \SI{8}{\nano\second}, \SI{20}{\nano\second} if cache miss
+& Includes ARM/PRU shared memory. \\
+L3 & Full 32-bit addressing & \SI{40}{\nano\second} & Access to DDR memory. \\
+L4 & Full 32-bit addressing & $>$\SI{40}{\nano\second}? & Access to peripherals and GPIO ports. \\
+\end{tabulary}
+}
+
+\vspace{\baselineskip}
+As long as a PRU instruction is accessing L1 memory, it can read the
+instruction, read the data, and write the result in a single clock cycle.
+Accessing L2 memory introduces a delay of two to five clock cycles
+plus additional uncertainty due to possible contention with the ARM. L3 and L4
+introduce delays of at least 8 clock cycles and additional nondeterminism
+because of possible contention with other devices on the AM335x.
+
+% I never found a completely authoritative source for the above numbers. BEN 
+
+Fortunately, the PRU provides ways to reduce or avoid accesses to memory
+beyond L1. The scratchpad registers R0--R29 can be loaded at the start of a
+program and serve as memory; PRU registers can even perform indirection,
+providing the ``address'' of an operand stored in another register.
+Bits in registers R30 and R31 of the PRU can be configured for direct
+access to GPIO bits, reducing access time to a single PRU clock cycle. (See
+section~4.4.1.2.3 of the \techref.)
+The PRU has a set of hard-coded ``constant'' registers, C0--C31, which hold
+frequently used addresses so these need not occupy the scratchpad registers.
+(See section~4.4.1.1 of the \techref.) Many addresses in the L2 and L3
+spaces lead to the same memory, so the PRU can avoid latency by accessing them
+through the L2 addresses. In particular, this is the best way for the PRU to
+access shared memory for communicating with the ARM.
 
 The PRU does not support interrupts. Interrupts would complicate real-time
 processing and make response times unpredictable. Instead, the PRU must poll
 sources of interrupts. The documentation still calls them ``interrupts'' and 
 the PRU has an ``interrupt controller'' (INTC) to track and prioritize them.
+
+There is no C compiler for the PRU. So, you must write all PRU code in
+assembly language by hand. The assembler for the PRU is called \textit{pasm}.
+
+In some documentation, the PRU is also called the PRUSS (Programmable
+Real-Time Unit Subsystem) and the \mbox{PRU-ICSS} (Programmable Real-Time Unit
+and Industrial Communication Subsystem).
+
+\subsection{Installing and compiling}
+
+I compiled all the code in this document on the BeagleBone Black itself under
+Debian~7. Running the following commands as the superuser on the BeagleBone
+Black will install the necessary development tools:
+
+\begin{lstlisting}{language=bash}
+  # apt-get install gdb
+  # apt-get install gpsd gpsd-clients python-gps libgps-dev
+\end{lstlisting}
+
+@@Various stuff goes here.
+
+\section{Generating PWM}
+
+@@various stuff.
+
+\section{Capturing PWM}
+
+@@various stuff.
+
+\section{GPS}
+
+@@various stuff
+
 \end{document}
