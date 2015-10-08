@@ -7,7 +7,7 @@
  *
  * RESULT:
  *   Easily keeps up with one-microsecond accuracy. Adding a delay loop
- *   in the PRU's main loop of as many as 1,800,000 iterations does not
+ *   inside the PRU's main loop of as many as 1,800,000 iterations does not
  *   affect the accuracy.
  *
  * Before running:

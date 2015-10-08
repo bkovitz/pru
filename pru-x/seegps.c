@@ -3,21 +3,6 @@
  *
  * The source code shows you exactly how to extract GPS data from libgps.
  *
- * To run seegps, you must first run:
- *
- *   ./enable-gps
- *   sudo gpsd -n /dev/ttyO1
- *
- * and connect the BeagleBone to a GPS at uart1_rxd (P9.26). For the
- * LS23060, the connections are:
- *
- *   3.3V power -- P9.3
- *   GND        -- P9.1
- *   DATA       -- P9.26
- *
- * There's no need to transmit to the GPS device: it sends data
- * continuously.
- *
  * RESULT
  *   Each time you call gps_read(), it fills in the gps_data_t struct,
  *   setting bits in .set to indicate which members contain new and

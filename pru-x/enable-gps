@@ -1,0 +1,5 @@
+sudo bash <<- EOF
+echo BB-UART1 > /sys/devices/bone_capemgr.9/slots &&
+stty -F /dev/ttyO1 57600 &&
+gpsd -n /dev/ttyO1
+EOF
