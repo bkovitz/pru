@@ -6,9 +6,6 @@
  * Generates PWM wave with varying pulse widths at GPIO1[28] (P9.12) and
  * samples at GPIO1[16] (P9.15).
  *
- * RESULT:
- *   ???
- *
  * Before running:
  *   The enable_pru01 script must have been run. It's only needed once per
  *   reboot of the Beaglebone, to enable access to the PRU.
