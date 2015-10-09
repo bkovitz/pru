@@ -453,9 +453,85 @@ DELAY1:
 \end{lstlisting}
 
 Notice that the \texttt{lbco} instruction reads 8 bytes of memory. The results
-go into registers r5 and r6. This corresponds to the \textit{PRU\_DELAYS}
+go into registers R5 and R6. This corresponds to the \textit{PRU\_DELAYS}
 struct defined in section~\ref{sec-setup}.
 
 \section{Measuring time on the PRU} \label{sec-measuring}
+
+While it's possible to measure the time between events very accurately in a
+tight loop on the PRU, if the PRU is monitoring or scheduling multiple tasks,
+it's easier to simply use one of the \texttt{DMTIMER}s provided on the AM335x.
+The C1 register is conveniently predefined to \texttt{DMTIMER2}, which Linux
+initializes to run at \SI{24}{\mega\hertz}. This is exploited in the code
+below, excerpted from \textit{measurep.p}. (The tight-loop approach is
+demonstrated in some of the source files in the \texttt{pru-x} directory if
+you need it.)
+
+\begin{lstlisting}{language=assembly}
+input_is_low:
+    lbbo    r10, r27, 0, 4  // read input reg into r10
+    and     r10, r10, r28   // is our pin high?
+    qbeq    input_is_low, r10, 0  // no, keep sampling
+
+    lbco    common.start, c1, TCRR, 4  // timestamp of start of pulse
+\end{lstlisting}
+
+\textit{TCRR} is the offset of the timer counter register, relative to
+the start of the \textit{DMTIMER} memory block. (See section~20.1.5.10 of the
+\techref.)
+
+\texttt{common.start} is an alias for register R2. This is set up by some
+definitions appearing earlier in the \textit{.p} file. These illustrate how
+the PRU instruction set makes it easy to interface with structs defined in C.
+
+\begin{lstlisting}{language=assembly}
+.struct Common	// Memory for communication with host, at start of PRU DATA RAM
+    .u32    gpio_base       // base address of GPIO register
+    .u8     pin_bit         // which pin to read (0..31)
+    .u8     pru_evtout      // which PRU_EVTOUT to signal on exit
+    .u8     ignored1
+    .u8     ignored2
+    .u32    start           // timestamp of start of last pulse
+    .u32    end             // timestamp of end of last pulse
+.ends
+\end{lstlisting}
+
+\texttt{Common} corresponds to following C struct defined in
+\textit{loopback.c}:
+
+\begin{lstlisting}{language=assembly}
+typedef struct {
+  // Set by ARM, read by PRU:
+  unsigned int gpio_base;   // base address of GPIO register
+  unsigned char pin_bit;    // which pin to read (0..31)
+  unsigned char pru_evtout; // which PRU_EVTOUT to signal after measuring pulse
+  unsigned char ignored1;
+  unsigned char ignored2;
+  // Set by PRU, read by ARM:
+  unsigned int start;   // start timestamp of last pulse measured
+  unsigned int end;     // end timestamp of last pulse measured
+                        // Timestamps increment at 40 MHz
+} PRU_MEASURE;
+\end{lstlisting}
+
+The \texttt{Common} struct is mapped to registers R0--R3 by an \textit{.assign}
+pseudo-op:
+
+\begin{lstlisting}{language=assembly}
+    // Read info from ARM host
+    lbco    r0, c24, 0, SIZE(Common)
+    .assign Common, r0, r3, common
+\end{lstlisting}
+
+The code at the end of the loop writes the \textit{start} and \textit{end}
+measurements to memory and triggers the appropriate event on the ARM:
+
+\begin{lstlisting}{language=assembly}
+    sbco    common.start, c24, OFFSET(common.start), 8  // write timestamps
+    or      r31.b0, common.pru_evtout, PRU_R31_VEC_VALID // notify ARM
+\end{lstlisting}
+
+The event (the ID number of which was specified by the calling C program)
+causes the blocked wait in the \textit{pthread} to terminate.
 
 \end{document}
