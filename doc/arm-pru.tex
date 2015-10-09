@@ -5,13 +5,14 @@
 
 \usepackage{enumitem}
 \usepackage{tabulary}
+\usepackage{multirow}
 \usepackage{siunitx}
 
 \usepackage{hyperref}
 \usepackage{url}
 \urlstyle{sf}
 
-\newcommand{\techref}{\textit{AM335x Technical Reference Manual}}
+\newcommand{\techref}{\textit{AM335x Technical Reference}}
 
 \newenvironment{docref}
    {\vspace{\baselineskip}\noindent\begin{minipage}{\textwidth}\raggedright}
@@ -44,13 +45,21 @@ straightforward to modify the examples presented here to make the PRU perform
 tasks with hard real-time constraints of about 24~MHz while the ARM runs Linux
 concurrently.
 
+The complete example code can be downloaded from
+\url{https://github.com/bkovitz/pru}. \label{sec-repo}
+This document includes only code
+snippets and explanations of principles and techniques that are either
+fundamental or hard to piece together from the documentation. The Github
+repository also contains \texttt{seegps.c}, which illustrates how to access
+GPS data on the BeagleBone.
+
 \subsection{Must-have documentation}
 
 These are the authoritative manuals from Texas Instruments:
 
 \nopagebreak
 \begin{docref}
-\techref \\
+\textit{AM335x Technical Reference Manual} \\
 \url{http://www.ti.com/lit/ug/spruh73l/spruh73l.pdf} \\
 4,972 pages, including all memory maps, but it still doesn't explain everything.
 \end{docref}
@@ -147,6 +156,12 @@ spaces lead to the same memory, so the PRU can avoid latency by accessing them
 through the L2 addresses. In particular, this is the best way for the PRU to
 access shared memory for communicating with the ARM.
 
+Each PRU has 8K of instruction memory, running from addresses  0x00000000 to
+0x00001fff (as seen from the PRU). A PRU's instruction memory cannot be
+written to while the PRU is executing instructions. Each PRU has 8K of data
+RAM, also running from addresses 0x00000000 to 0x00001fff; each PRU sees the
+other PRU's data RAM at 0x00002000 to 0x00003fff.
+
 The PRU does not support interrupts. Interrupts would complicate real-time
 processing and make response times unpredictable. Instead, the PRU must poll
 sources of interrupts. The documentation still calls them ``interrupts'' and 
@@ -155,9 +170,9 @@ the PRU has an ``interrupt controller'' (INTC) to track and prioritize them.
 There is no C compiler for the PRU. So, you must write all PRU code in
 assembly language by hand. The assembler for the PRU is called \textit{pasm}.
 
-In some documentation, the PRU is also called the PRUSS (Programmable
-Real-Time Unit Subsystem) and the \mbox{PRU-ICSS} (Programmable Real-Time Unit
-and Industrial Communication Subsystem).
+Technically, the entire unit that contains both PRUs is called the PRUSS
+(Programmable Real-Time Unit Subsystem) or \mbox{PRU-ICSS} (Programmable
+Real-Time Unit and Industrial Communication Subsystem).
 
 \subsection{Installing and compiling}
 
@@ -170,7 +185,71 @@ Black will install the necessary development tools:
   # apt-get install gpsd gpsd-clients python-gps libgps-dev
 \end{lstlisting}
 
-@@Various stuff goes here.
+\noindent
+(The second line is needed only to run \texttt{seegps.c}.)
+
+Development tools for the PRU are available at
+\url{git://github.com/beagleboard/am335x\_pru\_package.git}. This is already
+included in the repository for this document (see section~\ref{sec-repo}).
+You'll need to compile pasm and the \texttt{prussdrv} application-loader
+library and install the header files:
+
+\begin{lstlisting}{language=bash}
+  $ cd $PRUHOME/am335x_pru_package-master/pru_sw/app_loader/interface
+  $ make CROSS_COMPILE=""
+  $ sudo make CROSS_COMPILE="" install
+  $ cd ../../utils/pasm_source
+  $ ./linuxbuild
+  $ sudo cp pasm /usr/bin
+\end{lstlisting}
+
+\section{Hooking up the hardware}
+
+The main example program performs a PWM loopback test, generating pulses on
+the GPIO1[28] pin and capturing them on the GPIO1[16] pin. To make this
+connection, simply connect a jumper between pins 12 and 15 on the BeagleBone's
+P9 header.
+
+To run the \texttt{seegps} program, you'll also need to hook up a GPS receiver
+to UART1 on the BeagleBone (\texttt{/dev/ttyO1}). For the LS23060, the
+connections are:
+
+\nopagebreak
+\vspace{\baselineskip}
+\begin{tabulary}{\dimexpr\textwidth-\parindent\relax}{LCL}
+\multicolumn{2}{l}{LS23060 (GPS)} & BeagleBone pin \\
+\hline
+3.3V power & to & P9.3 \\
+GND & to & P9.1 \\
+DATA & to & P9.26 (uart1\_rxd)
+\end{tabulary}
+\vspace{\baselineskip}
+
+There's no need to transmit to the GPS device: it sends data continuously.
+
+\section{Enabling the hardware}
+
+Before program code on Linux on the BeagleBone can access the PRU and other
+hardware, the drivers for tha hardware must be enabled. This is done most
+easily through the \textit{sysfs} filesystem.
+
+To enable the PRU (included in the \texttt{enable-pru01} shell script):
+
+\begin{lstlisting}{language=bash}
+  # echo BB-BONE-PRU-01 > /sys/devices/bone_capemgr.9/slots
+  # modprobe uoi_pruss
+\end{lstlisting}
+
+To enable GPS over UART1 (included in the \texttt{enable-gps} shell script):
+
+\begin{lstlisting}{language=bash}
+  # echo BB-UART1 > /sys/devices/bone_capemgr.9/slots
+  # stty -F /dev/ttyO1 57600
+  # gpsd -n /dev/ttyO1
+\end{lstlisting}
+
+You may have to adjust the baud rate if you're using a GPS receiver other than
+the LS23060.
 
 \section{Generating PWM}
 

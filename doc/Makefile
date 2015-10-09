@@ -17,6 +17,11 @@ $(PDFFILES): $(BIBFILES)
 %.pdf: %.dot
 	$(DOT) < $< >$@
 
-clean:
+clean: commitclean
+	rm -f arm-pru.pdf
+
+# Clean only files that should not be committed to repository.
+commitclean:
 	rm -f *.aux *.fls *.log *.toc *.fdb_latexmk arm-pru.pdf
 
+.PHONY: clean commitclean
