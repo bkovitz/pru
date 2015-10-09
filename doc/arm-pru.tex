@@ -79,8 +79,8 @@ A more-convenient description of the PRU instruction set.
 \begin{docref}
 \textit{PRU Linux Application Loader API Guide} \\
 \url{http://processors.wiki.ti.com/index.php/PRU\_Linux\_Application\_Loader\_API\_Guide} \\
-The C API for loading programs into PRU memory, enabling and disabling the
-PRUs, etc.
+The C API for the \textit{prussdrv} library, which loads programs into
+PRU memory, starts and stops the PRUs, etc.
 \end{docref}
 
 \vspace{\baselineskip}
@@ -110,8 +110,7 @@ The PRU runs at 200~MHz, has four buses, and no pipeline. Most
 instructions take only one clock cycle despite the lack of a pipeline. Since
 there is no pipeline, calculating the time required to execute PRU code is
 often as simple as counting the instructions and multiplying by
-\SI{5}{\nano\second}. The PRU even has a single-clock-cycle integer multiply
-instruction.
+\SI{5}{\nano\second}.
 
 The AM335x has four memory spaces:
 
@@ -378,8 +377,85 @@ loop:
    }
 \end{lstlisting}
 
-\section{GPS}
+\section{Accessing memory from the PRU}
 
-@@various stuff
+To enable the PRU to access main memory (not just PRU data RAM), a bit in a
+configuration register must be cleared. Most PRU programs begin with these
+instructions, which clear that bit:
+
+\begin{lstlisting}{language=assembly}
+START:
+    // Clear STANDBY_INIT in SYSCFG so PRU can access main memory.
+    lbco    r0, C4, SYSCFG, 4
+    clr     r0, r0, 4       // STANDBY_INIT is bit 4
+    sbco    r0, C4, SYSCFG, 4
+\end{lstlisting}
+
+\textit{SYSCFG} is an offset into the \textit{CTRL} block for the currently
+running PRU, documented in section~4.5.7.2 of the \techref.  C4 is a constant
+register that contains the address of that \textit{CTRL} block.
+\textit{SYSCFG}, like all the constants explained in this section, is defined
+in \textit{constants.h}.
+
+The \texttt{lbco} and \texttt{sbco} instructions load and store a ``burst''
+(that's what the \textit{b} stands for) of data from or to memory, given a
+base register and an offset. (The offset can also be a register.) The last
+argument tells how many bytes to write.  These instructions make it easy to
+load and store entire data structures spanning multiple registers (and
+multiple words in memory); more about this in section~\ref{sec-measuring}.
+
+Once \textit{SYSCFG} is set up, the PRU can read and write the ARM's memory
+directly:
+
+\begin{lstlisting}{language=assembly}
+    // Put the GPIO1[28] pin into output mode.
+    mov     r1, GPIO1 | GPIO_OE
+    lbbo    r2, r1, 0, 4    // r2 = current GPIO settings
+    clr     r2, PIN_BIT     // clear the bit => output mode
+    sbbo    r2, r1, 0, 4    // write new GPIO settings
+\end{lstlisting}
+
+The only difference between the \texttt{sbbo} and \texttt{sbco} instructions is
+that \texttt{sbco}'s base register is a constant register and \texttt{sbbo}'s
+base register is a scratchpad register.
+
+The C24 register points to the running PRU's own data RAM. However, four bits
+of C24 are configurable, which enables easy context-switching; see
+section~4.5.1.6 of the \techref. To be safe, PRU code should clear these bits
+to access data at offset 0x0000 of data RAM:
+
+\begin{lstlisting}{language=assembly}
+    // Make sure that C24 -> start of PRU DATA RAM
+    mov     r0, 0x0
+    mov     r1, PRU_ICSS_PRU0_CTRL
+    sbbo    r0, r1, CTBIR0, 1
+\end{lstlisting}
+
+It's simplest and most efficient to convert a delay time into a number of
+loop iterations in C, and write that number to PRU data RAM, like this:
+
+\begin{lstlisting}{language=assembly}
+    // Read PRU DATA RAM.
+    lbco    r5, C24, 0, 8   // r5 = hi_delay, r6 = lo_delay
+
+    // LO part of PWM.
+    mov     r4, GPIO1 | GPIO_SETDATAOUT
+    sbbo    r3, r4, 0, 4    // send BIT28 to "set bit" address
+
+DELAY1:
+    sub     r6, r6, 1       // bump delay counter
+    qbne    DELAY1, r6, 0   // not done with delay yet?
+
+    // HI part of PWM (the pulse).
+    mov     r4, GPIO1 | GPIO_CLEARDATAOUT
+    sbbo    r3, r4, 0, 4    // send BIT28 to "clear bit" address
+    // . . .
+\end{lstlisting}
+
+Notice that the \texttt{lbco} instruction reads 8 bytes of memory. The results
+go into registers r5 and r6. This corresponds to the \textit{PRU\_DELAYS}
+struct defined in section~\ref{sec-setup}.
+
+\section{Measuring time on the PRU} \label{sec-measuring}
 
 \end{document}
