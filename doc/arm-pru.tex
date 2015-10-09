@@ -534,4 +534,9 @@ measurements to memory and triggers the appropriate event on the ARM:
 The event (the ID number of which was specified by the calling C program)
 causes the blocked wait in the \textit{pthread} to terminate.
 
+The \textit{loopback} test did not lose any accuracy even when a
+1,800,000-iteration delay loop was added inside the main loop of
+\textit{measurep.p}. So, the simple approach of checking GPIO pins and saving
+timestamps leaves nearly all of the PRU's capacity untapped.
+
 \end{document}
