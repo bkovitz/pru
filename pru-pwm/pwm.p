@@ -14,37 +14,42 @@
 
 START:
 	// Clear STANDBY_INIT in SYSCFG so PRU can access main memory.
-	LBCO	r0, C4, 4, 4
-	CLR	r0, r0, 4
-	SBCO	r0, C4, 4, 4
+	lbco	r0, C4, SYSCFG, 4
+	clr	r0, r0, 4	// STANDBY_INIT is bit 4
+	sbco	r0, C4, SYSCFG, 4
+
+	// Make sure that C24 -> start of PRU DATA RAM
+	mov	r0, 0x0
+	mov	r1, PRU_ICSS_PRU0_CTRL	// hard-coded PRU unit??
+	sbbo	r0, r1, CTBIR0, 1
 
 	// Put the GPIO1[28] pin into output mode.
-	MOV	r1, GPIO1 | GPIO_OE
-	LBBO	r2, r1, 0, 4	// r2 = current GPIO settings
-	CLR	r2, PIN_BIT	// clear the bit => output mode
-	SBBO	r2, r1, 0, 4	// write new GPIO settings
+	mov	r1, GPIO1 | GPIO_OE
+	lbbo	r2, r1, 0, 4	// r2 = current GPIO settings
+	clr	r2, PIN_BIT	// clear the bit => output mode
+	sbbo	r2, r1, 0, 4	// write new GPIO settings
 
-	MOV	r3, (1 << PIN_BIT)
+	mov	r3, (1 << PIN_BIT)
 
 MAIN_LOOP:
 	// Read PRU DATA RAM.
-	LBCO	r5, C24, 0, 8	// r5 = hi_delay, r6 = lo_delay
+	lbco	r5, C24, 0, 8	// r5 = hi_delay, r6 = lo_delay
 
 	// LO part of PWM.
-	MOV	r4, GPIO1 | GPIO_SETDATAOUT
-	SBBO	r3, r4, 0, 4	// send BIT28 to "set bit" address
+	mov	r4, GPIO1 | GPIO_SETDATAOUT
+	sbbo	r3, r4, 0, 4	// send BIT28 to "set bit" address
 
 DELAY1:
-	SUB	r6, r6, 1	// bump delay counter
-	QBNE	DELAY1, r6, 0 	// not done with delay yet?
+	sub	r6, r6, 1	// bump delay counter
+	qbne	DELAY1, r6, 0 	// not done with delay yet?
 
 	// HI part of PWM (the pulse).
-	MOV	r4, GPIO1 | GPIO_CLEARDATAOUT
-	SBBO	r3, r4, 0, 4	// send BIT28 to "clear bit" address
+	mov	r4, GPIO1 | GPIO_CLEARDATAOUT
+	sbbo	r3, r4, 0, 4	// send BIT28 to "clear bit" address
 
 DELAY2:
-	SUB	r5, r5, 1	// bump delay counter
-	QBNE	DELAY2, r5, 0	// not done with delay yet?
+	sub	r5, r5, 1	// bump delay counter
+	qbne	DELAY2, r5, 0	// not done with delay yet?
 
-	QBA	MAIN_LOOP	// infinite loop
+	qba	MAIN_LOOP	// infinite loop
 

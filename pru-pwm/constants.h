@@ -87,3 +87,19 @@
 #define PRU_EVTOUT_0_CODE 3
 #define PRU_EVTOUT_1_CODE 4
 
+
+// PRU CFG (configuration)
+// Access the CFG block through register C4.
+
+// offsets
+#define SYSCFG 0x04       // system configuration register
+
+
+// PRU Control  (sec 4.5 of AM335x Technical Reference)
+#define PRU_ICSS_PRU0_CTRL 0x00022000
+#define PRU_ICSS_PRU1_CTRL 0x00024000
+// You really don't need the above two constants on the PRU: the base address
+// of the control registers for the currently running PRU is in register C4.
+
+// offsets
+#define CTBIR0 0x20       // constants table block index register 0
