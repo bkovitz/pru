@@ -1,14 +1,14 @@
-ALL=thrloopback seegps
+ALL=loopback seegps
 
 CFLAGS+=-Wall -Werror -O3 -std=gnu99 -lm -lgps
 LDLIBS+= -lpthread -lprussdrv
 
 all: $(ALL)
 
-runthrloopback: thrloopback
-	sudo ./thrloopback
+runloopback: loopback
+	sudo ./loopback
 
-thrloopback: thrloopback.o pwm.o measurep.o
+loopback: loopback.o pwm.o measurep.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 %.bin: %.p
