@@ -5,13 +5,14 @@
 
 \usepackage{enumitem}
 \usepackage{tabulary}
+\usepackage{multirow}
 \usepackage{siunitx}
 
 \usepackage{hyperref}
 \usepackage{url}
 \urlstyle{sf}
 
-\newcommand{\techref}{\textit{AM335x Technical Reference Manual}}
+\newcommand{\techref}{\textit{AM335x Technical Reference}}
 
 \newenvironment{docref}
    {\vspace{\baselineskip}\noindent\begin{minipage}{\textwidth}\raggedright}
@@ -44,13 +45,21 @@ straightforward to modify the examples presented here to make the PRU perform
 tasks with hard real-time constraints of about 24~MHz while the ARM runs Linux
 concurrently.
 
+The complete example code can be downloaded from
+\url{https://github.com/bkovitz/pru}. \label{sec-repo}
+This document includes only code
+snippets and explanations of principles and techniques that are either
+fundamental or hard to piece together from the documentation. The Github
+repository also contains \texttt{seegps.c}, which illustrates how to access
+GPS data on the BeagleBone.
+
 \subsection{Must-have documentation}
 
 These are the authoritative manuals from Texas Instruments:
 
 \nopagebreak
 \begin{docref}
-\techref \\
+\textit{AM335x Technical Reference Manual} \\
 \url{http://www.ti.com/lit/ug/spruh73l/spruh73l.pdf} \\
 4,972 pages, including all memory maps, but it still doesn't explain everything.
 \end{docref}
@@ -70,8 +79,8 @@ A more-convenient description of the PRU instruction set.
 \begin{docref}
 \textit{PRU Linux Application Loader API Guide} \\
 \url{http://processors.wiki.ti.com/index.php/PRU\_Linux\_Application\_Loader\_API\_Guide} \\
-The C API for loading programs into PRU memory, enabling and disabling the
-PRUs, etc.
+The C API for the \textit{prussdrv} library, which loads programs into
+PRU memory, starts and stops the PRUs, etc.
 \end{docref}
 
 \vspace{\baselineskip}
@@ -101,8 +110,7 @@ The PRU runs at 200~MHz, has four buses, and no pipeline. Most
 instructions take only one clock cycle despite the lack of a pipeline. Since
 there is no pipeline, calculating the time required to execute PRU code is
 often as simple as counting the instructions and multiplying by
-\SI{5}{\nano\second}. The PRU even has a single-clock-cycle integer multiply
-instruction.
+\SI{5}{\nano\second}.
 
 The AM335x has four memory spaces:
 
@@ -147,6 +155,12 @@ spaces lead to the same memory, so the PRU can avoid latency by accessing them
 through the L2 addresses. In particular, this is the best way for the PRU to
 access shared memory for communicating with the ARM.
 
+Each PRU has 8K of instruction memory, running from addresses  0x00000000 to
+0x00001fff (as seen from the PRU). A PRU's instruction memory cannot be
+written to while the PRU is executing instructions. Each PRU has 8K of data
+RAM, also running from addresses 0x00000000 to 0x00001fff; each PRU sees the
+other PRU's data RAM at 0x00002000 to 0x00003fff.
+
 The PRU does not support interrupts. Interrupts would complicate real-time
 processing and make response times unpredictable. Instead, the PRU must poll
 sources of interrupts. The documentation still calls them ``interrupts'' and 
@@ -155,9 +169,9 @@ the PRU has an ``interrupt controller'' (INTC) to track and prioritize them.
 There is no C compiler for the PRU. So, you must write all PRU code in
 assembly language by hand. The assembler for the PRU is called \textit{pasm}.
 
-In some documentation, the PRU is also called the PRUSS (Programmable
-Real-Time Unit Subsystem) and the \mbox{PRU-ICSS} (Programmable Real-Time Unit
-and Industrial Communication Subsystem).
+Technically, the entire unit that contains both PRUs is called the PRUSS
+(Programmable Real-Time Unit Subsystem) or \mbox{PRU-ICSS} (Programmable
+Real-Time Unit and Industrial Communication Subsystem).
 
 \subsection{Installing and compiling}
 
@@ -170,18 +184,278 @@ Black will install the necessary development tools:
   # apt-get install gpsd gpsd-clients python-gps libgps-dev
 \end{lstlisting}
 
-@@Various stuff goes here.
+\noindent
+(The second line is needed only to run \texttt{seegps.c}.)
 
-\section{Generating PWM}
+Development tools for the PRU are available at
+\url{git://github.com/beagleboard/am335x\_pru\_package.git}. This is already
+included in the repository for this document (see section~\ref{sec-repo}).
+You'll need to compile pasm and the \textit{prussdrv} \label{sec-prussdrv}
+application-loader library and install the header files:
 
-@@various stuff.
+\begin{lstlisting}{language=bash}
+  $ cd $PRUHOME/am335x_pru_package-master/pru_sw/app_loader/interface
+  $ make CROSS_COMPILE=""
+  $ sudo make CROSS_COMPILE="" install
+  $ cd ../../utils/pasm_source
+  $ ./linuxbuild
+  $ sudo cp pasm /usr/bin
+\end{lstlisting}
 
-\section{Capturing PWM}
+\section{Hooking up the hardware}
 
-@@various stuff.
+The main example program performs a PWM loopback test, generating pulses on
+the GPIO1[28] pin and capturing them on the GPIO1[16] pin. To make this
+connection, simply connect a jumper between pins 12 and 15 on the BeagleBone's
+P9 header.
 
-\section{GPS}
+To run the \texttt{seegps} program, you'll also need to hook up a GPS receiver
+to UART1 on the BeagleBone (\texttt{/dev/ttyO1}). For the LS23060, the
+connections are:
 
-@@various stuff
+\nopagebreak
+\vspace{\baselineskip}
+\begin{tabulary}{\dimexpr\textwidth-\parindent\relax}{LCL}
+\multicolumn{2}{l}{LS23060 (GPS)} & BeagleBone pin \\
+\hline
+3.3V power & to & P9.3 \\
+GND & to & P9.1 \\
+DATA & to & P9.26 (uart1\_rxd)
+\end{tabulary}
+\vspace{\baselineskip}
+
+There's no need to transmit to the GPS device: it sends data continuously.
+
+\section{Enabling the hardware}
+
+Before program code on Linux on the BeagleBone can access the PRU and other
+hardware, the drivers for tha hardware must be enabled. This is done most
+easily through the \textit{sysfs} filesystem.
+
+To enable the PRU (included in the \texttt{enable-pru01} shell script):
+
+\begin{lstlisting}{language=bash}
+  # echo BB-BONE-PRU-01 > /sys/devices/bone_capemgr.9/slots
+  # modprobe uoi_pruss
+\end{lstlisting}
+
+To enable GPS over UART1 (included in the \texttt{enable-gps} shell script):
+
+\begin{lstlisting}{language=bash}
+  # echo BB-UART1 > /sys/devices/bone_capemgr.9/slots
+  # stty -F /dev/ttyO1 57600
+  # gpsd -n /dev/ttyO1
+\end{lstlisting}
+
+You may have to adjust the baud rate if you're using a GPS receiver other than
+the LS23060.
+
+\section{Setting up a PRU} \label{sec-setup}
+
+\texttt{loopback.c} demonstrates everything involved in setting up a PRU from
+C. All of the set-up involves the \textit{prussdrv} application-loader
+library that you installed in section~\ref{sec-prussdrv}.
+
+First, you must call \textit{prussdrv\_init} to initialize the library.
+For each PRU interrupt event that you are going to work with, you must call
+\textit{prussdrv\_open}, passing it \texttt{PRU\_EVTOUT\_0} or
+\texttt{PRU\_EVTOUT\_1} depending on which event you will be setting up.
+Even if you don't use interrupt events, you must call \textit{prussdrv\_open}
+at least once.
+
+To access a PRU's data RAM, you must call \textit{prussdrv\_map\_prumem}
+and let it write the virtual address in your Linux process's memory
+of the PRU data RAM. For example:
+
+\begin{lstlisting}{language=C}
+  prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, (void**)&pru_delays);
+\end{lstlisting}
+
+\noindent
+where \textit{pru\_delays} has been defined as follows:
+
+\begin{lstlisting}{language=C}
+typedef struct {
+  unsigned int hi_delay;  // number of PRU loop iterations during pulse
+  unsigned int lo_delay;  // number of PRU loop iterations between pulses
+    // Each loop iteration takes 2 PRU clock cycles, or 10 ns.
+} PRU_DELAYS;
+
+PRU_DELAYS *pru_delays;     // Will point to PRU0 DATA RAM
+\end{lstlisting}
+
+Once you have the virtual address, you can initialize the PRU data RAM
+by calling \textit{memset} or otherwise just writing directly to the memory.
+
+To initialize the PRU's instruction RAM, call
+\textit{prussdrv\_pru\_write\_memory} as illustrated here:
+
+\begin{lstlisting}{language=C}
+  if (prussdrv_pru_write_memory(
+        PRUSS0_PRU0_IRAM, 0, (unsigned int *)pwm_bin, pwm_bin_len
+     ) != pwm_bin_len / 4) {
+    perror("prussdrv_pru_write_memory(PRU0)");
+    return 1;
+  }
+\end{lstlisting}
+
+\textit{pwm\_bin} is an array containing a binary image of the assembled PRU
+machine code:
+
+\begin{lstlisting}{language=C}
+   extern unsigned char pwm_bin[];  // generated by xxd from pwm.p
+   extern unsigned int pwm_bin_len;
+\end{lstlisting}
+
+The standard Linux utility \textit{xxd~-i} generates C source code defining
+an array containing each byte in a given binary file. The Makefile in
+\texttt{pru-pwm} demonstrates GNU Make pattern rules that automate converting
+a \textit{.p} (\textit{pasm}) file into a \textit{.o} file suitable for
+linking with code containing the above external declarations.
+
+To enable blocking waits in C for a PRU to signal an event, you must enable
+interrupts by calling \textit{prussdrv\_pruintc\_intc}:
+
+\begin{lstlisting}{language=C}
+  static tpruss_intc_initdata intc = PRUSS_INTC_INITDATA;
+  if (prussdrv_pruintc_init(&intc) != 0) {
+    perror("prussdrv_pruintc_init()");
+    return 1;
+  }
+\end{lstlisting}
+
+\noindent
+\textit{intc} is a fairly complex struct that permits a great deal of
+customization.  Fortunately, \textit{PRUSS\_INTC\_INITDATA} provides a set of
+defaults that are correct for most uses.
+
+To start a PRU executing, call \textit{prussdrv\_pru\_enable}:
+
+\begin{lstlisting}{language=C}
+  if (prussdrv_pru_enable(PRU0) != 0) {
+    perror("prussdrv_pru_enable(0)");
+    return 1;
+  }
+\end{lstlisting}
+
+To stop the PRU, call \textit{prussdrv\_pru\_disable} with the same argument.
+
+\section{Communicating with a running PRU}
+
+The simplest way for a C program to communicate with a running PRU is to
+read and write the PRU's data RAM. With \textit{pru\_delays} set up as
+explained in section~\ref{sec-setup}, you can simply write to the data
+structure that's laid out in the PRU's data RAM:
+
+\begin{lstlisting}{language=C}
+  pru_delays->hi_delay =
+      (1000 + pulse_width) * CLOCKS_PER_uS / CLOCKS_PER_LOOP;
+  pru_delays->lo_delay =
+      (19000 - pulse_width) * CLOCKS_PER_uS / CLOCKS_PER_LOOP;
+\end{lstlisting}
+
+There is some danger that the PRU will read half-written data. I have not
+found clear-cut documentation or an example on the Internet for a recommended
+technique to prevent that. Roughly, the way to prevent out-of-sync writes to
+PRU data RAM is to send the PRU an interrupt (an ``event'') and then clear the
+event, and write PRU code to treat the event as a semaphore.
+
+To read from PRU data RAM, \textit{prussdrv\_pru\_wait\_event} provides an
+easy way to wait until the PRU signals that it has written new data. You can
+simply make a \textit{pthread} that waits for the PRU event in an infinite
+loop:
+
+\begin{lstlisting}{language=C}
+   void *measure_thread_func(void *arg) {
+     do {
+       prussdrv_pru_wait_event(PRU_EVTOUT_1);
+       signed int start = pru_measure->start;
+       signed int end =   pru_measure->end;
+       // . . .
+       prussdrv_pru_clear_event(PRU_EVTOUT_1, PRU1_ARM_INTERRUPT);
+     } while (1);
+   }
+\end{lstlisting}
+
+\section{Accessing memory from the PRU}
+
+To enable the PRU to access main memory (not just PRU data RAM), a bit in a
+configuration register must be cleared. Most PRU programs begin with these
+instructions, which clear that bit:
+
+\begin{lstlisting}{language=assembly}
+START:
+    // Clear STANDBY_INIT in SYSCFG so PRU can access main memory.
+    lbco    r0, C4, SYSCFG, 4
+    clr     r0, r0, 4       // STANDBY_INIT is bit 4
+    sbco    r0, C4, SYSCFG, 4
+\end{lstlisting}
+
+\textit{SYSCFG} is an offset into the \textit{CTRL} block for the currently
+running PRU, documented in section~4.5.7.2 of the \techref.  C4 is a constant
+register that contains the address of that \textit{CTRL} block.
+\textit{SYSCFG}, like all the constants explained in this section, is defined
+in \textit{constants.h}.
+
+The \texttt{lbco} and \texttt{sbco} instructions load and store a ``burst''
+(that's what the \textit{b} stands for) of data from or to memory, given a
+base register and an offset. (The offset can also be a register.) The last
+argument tells how many bytes to write.  These instructions make it easy to
+load and store entire data structures spanning multiple registers (and
+multiple words in memory); more about this in section~\ref{sec-measuring}.
+
+Once \textit{SYSCFG} is set up, the PRU can read and write the ARM's memory
+directly:
+
+\begin{lstlisting}{language=assembly}
+    // Put the GPIO1[28] pin into output mode.
+    mov     r1, GPIO1 | GPIO_OE
+    lbbo    r2, r1, 0, 4    // r2 = current GPIO settings
+    clr     r2, PIN_BIT     // clear the bit => output mode
+    sbbo    r2, r1, 0, 4    // write new GPIO settings
+\end{lstlisting}
+
+The only difference between the \texttt{sbbo} and \texttt{sbco} instructions is
+that \texttt{sbco}'s base register is a constant register and \texttt{sbbo}'s
+base register is a scratchpad register.
+
+The C24 register points to the running PRU's own data RAM. However, four bits
+of C24 are configurable, which enables easy context-switching; see
+section~4.5.1.6 of the \techref. To be safe, PRU code should clear these bits
+to access data at offset 0x0000 of data RAM:
+
+\begin{lstlisting}{language=assembly}
+    // Make sure that C24 -> start of PRU DATA RAM
+    mov     r0, 0x0
+    mov     r1, PRU_ICSS_PRU0_CTRL
+    sbbo    r0, r1, CTBIR0, 1
+\end{lstlisting}
+
+It's simplest and most efficient to convert a delay time into a number of
+loop iterations in C, and write that number to PRU data RAM, like this:
+
+\begin{lstlisting}{language=assembly}
+    // Read PRU DATA RAM.
+    lbco    r5, C24, 0, 8   // r5 = hi_delay, r6 = lo_delay
+
+    // LO part of PWM.
+    mov     r4, GPIO1 | GPIO_SETDATAOUT
+    sbbo    r3, r4, 0, 4    // send BIT28 to "set bit" address
+
+DELAY1:
+    sub     r6, r6, 1       // bump delay counter
+    qbne    DELAY1, r6, 0   // not done with delay yet?
+
+    // HI part of PWM (the pulse).
+    mov     r4, GPIO1 | GPIO_CLEARDATAOUT
+    sbbo    r3, r4, 0, 4    // send BIT28 to "clear bit" address
+    // . . .
+\end{lstlisting}
+
+Notice that the \texttt{lbco} instruction reads 8 bytes of memory. The results
+go into registers r5 and r6. This corresponds to the \textit{PRU\_DELAYS}
+struct defined in section~\ref{sec-setup}.
+
+\section{Measuring time on the PRU} \label{sec-measuring}
 
 \end{document}

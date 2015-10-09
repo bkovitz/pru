@@ -1,0 +1,11 @@
+.*.sw?
+.nfs*
+*~
+
+*.o
+*.so
+*.class
+
+*.aux
+*.fdb_latexmk
+*.fls
