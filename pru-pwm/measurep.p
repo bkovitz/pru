@@ -20,9 +20,14 @@
 
 start:
 	// Clear STANDBY_INIT in SYSCFG so PRU can access main memory.
-	lbco	r0, c4, 4, 4
+	lbco	r0, c4, SYSCFG, 4
 	clr	r0, r0, 4
-	sbco	r0, c4, 4, 4
+	sbco	r0, c4, SYSCFG, 4
+
+	// Make sure that C24 -> start of PRU DATA RAM
+	mov	r0, 0x0
+	mov	r1, PRU_ICSS_PRU1_CTRL	// hard-coded PRU unit??
+	sbbo	r0, r1, CTBIR0, 1
 
 	// Read info from ARM host
 	lbco	r0, c24, 0, SIZE(Common)
